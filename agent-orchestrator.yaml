@@ -3,7 +3,7 @@ worktreeDir: ~/.worktrees
 port: 3001
 defaults:
   runtime: tmux
-  agent: claude-code
+  agent: codex
   workspace: worktree
   notifiers:
     - desktop
