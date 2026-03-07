@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, extend, useFrame, useThree } from '@react-three/fiber'
+import { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import './App.css'
 import {
   DIRECTIONS,
@@ -17,12 +19,25 @@ import {
   stepSnake
 } from './gameUtils'
 
+extend({ ThreeOrbitControls })
+
 const INITIAL_SNAKE = [
   { x: 10, y: 10 },
   { x: 9, y: 10 },
   { x: 8, y: 10 }
 ]
 const INITIAL_DIRECTION = DIRECTIONS.ArrowRight
+const TICK_MS = 150
+const CELL_SIZE = 0.9
+const BOARD_SIZE = GRID_SIZE * CELL_SIZE
+const FLOOR_Y = -0.24
+const GRID_LINE_THICKNESS = 0.02
+const WALL_THICKNESS = 0.12
+const BOARD_EXTENT = BOARD_SIZE / 2
+const GRID_LINE_COORDS = Array.from(
+  { length: GRID_SIZE + 1 },
+  (_, index) => index * CELL_SIZE - BOARD_EXTENT
+)
 
 function buildCellMap(snake, food) {
   const map = new Map()
@@ -59,6 +74,169 @@ function getItemProgress(economy, itemId) {
   }
 
   return 'Repeatable'
+function toWorldPosition(segment) {
+  return {
+    x: segment.x * CELL_SIZE - BOARD_EXTENT + CELL_SIZE / 2,
+    z: segment.y * CELL_SIZE - BOARD_EXTENT + CELL_SIZE / 2
+  }
+}
+
+function FoodMesh({ food }) {
+  const meshRef = useRef(null)
+  const { x, z } = toWorldPosition(food)
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) {
+      return
+    }
+
+    const pulse = 1 + Math.sin(clock.getElapsedTime() * 4) * 0.12
+    meshRef.current.scale.setScalar(pulse)
+    meshRef.current.rotation.y += 0.02
+  })
+
+  return (
+    <mesh ref={meshRef} position={[x, 0.34, z]} castShadow>
+      <icosahedronGeometry args={[CELL_SIZE * 0.27, 1]} />
+      <meshStandardMaterial
+        color="#f97316"
+        emissive="#ea580c"
+        emissiveIntensity={0.35}
+        roughness={0.28}
+      />
+    </mesh>
+  )
+}
+
+function SnakeSegment({ segment, isHead }) {
+  const { x, z } = toWorldPosition(segment)
+  const height = isHead ? 0.72 : 0.56
+
+  return (
+    <mesh
+      position={[x, FLOOR_Y + GRID_LINE_THICKNESS + height / 2, z]}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[CELL_SIZE * 0.78, height, CELL_SIZE * 0.78]} />
+      <meshStandardMaterial
+        color={isHead ? '#22c55e' : '#15803d'}
+        emissive={isHead ? '#14532d' : '#052e16'}
+        emissiveIntensity={0.4}
+        roughness={0.24}
+        metalness={0.28}
+      />
+    </mesh>
+  )
+}
+
+function Arena() {
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, FLOOR_Y, 0]}>
+        <planeGeometry args={[BOARD_SIZE + 1.2, BOARD_SIZE + 1.2]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.92} metalness={0.06} />
+      </mesh>
+
+      {GRID_LINE_COORDS.map((coord) => (
+        <mesh key={`x-${coord}`} position={[coord, FLOOR_Y + 0.001, 0]} receiveShadow>
+          <boxGeometry args={[GRID_LINE_THICKNESS, GRID_LINE_THICKNESS, BOARD_SIZE]} />
+          <meshStandardMaterial color="#334155" />
+        </mesh>
+      ))}
+
+      {GRID_LINE_COORDS.map((coord) => (
+        <mesh key={`z-${coord}`} position={[0, FLOOR_Y + 0.001, coord]} receiveShadow>
+          <boxGeometry args={[BOARD_SIZE, GRID_LINE_THICKNESS, GRID_LINE_THICKNESS]} />
+          <meshStandardMaterial color="#334155" />
+        </mesh>
+      ))}
+
+      <mesh
+        position={[0, FLOOR_Y + 0.42, -BOARD_EXTENT - WALL_THICKNESS / 2]}
+        receiveShadow
+      >
+        <boxGeometry args={[BOARD_SIZE + WALL_THICKNESS, 0.86, WALL_THICKNESS]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+      <mesh
+        position={[0, FLOOR_Y + 0.42, BOARD_EXTENT + WALL_THICKNESS / 2]}
+        receiveShadow
+      >
+        <boxGeometry args={[BOARD_SIZE + WALL_THICKNESS, 0.86, WALL_THICKNESS]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+      <mesh
+        position={[-BOARD_EXTENT - WALL_THICKNESS / 2, FLOOR_Y + 0.42, 0]}
+        receiveShadow
+      >
+        <boxGeometry args={[WALL_THICKNESS, 0.86, BOARD_SIZE + WALL_THICKNESS]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+      <mesh
+        position={[BOARD_EXTENT + WALL_THICKNESS / 2, FLOOR_Y + 0.42, 0]}
+        receiveShadow
+      >
+        <boxGeometry args={[WALL_THICKNESS, 0.86, BOARD_SIZE + WALL_THICKNESS]} />
+        <meshStandardMaterial color="#1e293b" />
+      </mesh>
+    </group>
+  )
+}
+
+function CameraControls() {
+  const controlsRef = useRef(null)
+  const { camera, gl } = useThree()
+
+  useFrame(() => {
+    controlsRef.current?.update()
+  })
+
+  return (
+    <threeOrbitControls
+      ref={controlsRef}
+      args={[camera, gl.domElement]}
+      enablePan={false}
+      enableDamping
+      dampingFactor={0.07}
+      minPolarAngle={Math.PI / 4}
+      maxPolarAngle={Math.PI / 2.05}
+      minDistance={11}
+      maxDistance={24}
+    />
+  )
+}
+
+function SnakeScene({ snake, food }) {
+  return (
+    <Canvas
+      shadows
+      camera={{ position: [11.5, 13.5, 12], fov: 42, near: 0.1, far: 80 }}
+      dpr={[1, 1.8]}
+    >
+      <color attach="background" args={['#0b1220']} />
+      <ambientLight intensity={0.5} />
+      <hemisphereLight intensity={0.36} groundColor="#0f172a" />
+      <directionalLight
+        position={[7, 14, 5]}
+        intensity={1.1}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      <directionalLight position={[-8, 6, -6]} intensity={0.35} />
+      <Arena />
+      {snake.map((segment, index) => (
+        <SnakeSegment
+          key={`${segment.x}-${segment.y}-${index}`}
+          segment={segment}
+          isHead={index === 0}
+        />
+      ))}
+      {food && <FoodMesh food={food} />}
+      <CameraControls />
+    </Canvas>
+  )
 }
 
 function App() {
@@ -138,16 +316,7 @@ function App() {
     return () => window.clearInterval(timerId)
   }, [economy.coinMultiplier, economy.pendingGrowth, economy.shields, food, isGameOver, queuedDirection, tickMs])
 
-  const cells = useMemo(() => {
-    const map = buildCellMap(snake, food)
-    const result = []
-    for (let y = 0; y < GRID_SIZE; y += 1) {
-      for (let x = 0; x < GRID_SIZE; x += 1) {
-        result.push({ key: `${x},${y}`, type: map.get(`${x},${y}`) || 'empty' })
-      }
-    }
-    return result
-  }, [snake, food])
+  const occupiedCellCount = useMemo(() => buildCellMap(snake, food).size, [snake, food])
 
   function buyItem(itemId) {
     if (isGameOver) {
@@ -192,6 +361,16 @@ function App() {
             aria-hidden="true"
           />
         ))}
+      <h1>Snake 3D</h1>
+      <p className="instructions">Use arrow keys or WASD to move. Drag to orbit camera.</p>
+      <div className="hud">
+        <span>Score: {score}</span>
+        <span>Occupied: {occupiedCellCount}</span>
+        {isGameOver && <strong className="game-over">Game Over</strong>}
+      </div>
+
+      <section className="scene-shell" aria-label="snake-board">
+        <SnakeScene snake={snake} food={food} />
       </section>
 
       <section className="shop" aria-label="shop">
