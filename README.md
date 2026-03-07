@@ -1,6 +1,6 @@
-# Snake 1.0
+# Snake 2.0
 
-A minimal React implementation of Snake as the first milestone.
+A React Snake game with an in-match currency system and buff shop.
 
 ## Features
 
@@ -9,6 +9,12 @@ A minimal React implementation of Snake as the first milestone.
 - Food spawn and snake growth
 - Collision detection (wall + self)
 - Score tracking
+- Money earned from each bean
+- In-game shop with multiple upgrades:
+  - Coin multiplier
+  - Growth packs
+  - Collision shield
+  - Slow-time upgrade
 - Restart button
 
 ## Run
