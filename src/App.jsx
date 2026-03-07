@@ -74,6 +74,7 @@ function getItemProgress(economy, itemId) {
   }
 
   return 'Repeatable'
+}
 function toWorldPosition(segment) {
   return {
     x: segment.x * CELL_SIZE - BOARD_EXTENT + CELL_SIZE / 2,
@@ -316,6 +317,19 @@ function App() {
     return () => window.clearInterval(timerId)
   }, [economy.coinMultiplier, economy.pendingGrowth, economy.shields, food, isGameOver, queuedDirection, tickMs])
 
+  const cells = useMemo(() => {
+    const cellMap = buildCellMap(snake, food)
+    const nextCells = []
+
+    for (let y = 0; y < GRID_SIZE; y += 1) {
+      for (let x = 0; x < GRID_SIZE; x += 1) {
+        const type = cellMap.get(`${x},${y}`) ?? 'empty'
+        nextCells.push({ key: `${x}-${y}`, type })
+      }
+    }
+
+    return nextCells
+  }, [snake, food])
   const occupiedCellCount = useMemo(() => buildCellMap(snake, food).size, [snake, food])
 
   function buyItem(itemId) {
@@ -361,6 +375,7 @@ function App() {
             aria-hidden="true"
           />
         ))}
+      </section>
       <h1>Snake 3D</h1>
       <p className="instructions">Use arrow keys or WASD to move. Drag to orbit camera.</p>
       <div className="hud">
