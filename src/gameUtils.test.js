@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { hasCollision, spawnFood, stepSnake } from './gameUtils'
+import {
+  INITIAL_ECONOMY,
+  SHOP_ITEM_IDS,
+  canPurchaseItem,
+  getTickMs,
+  hasCollision,
+  purchaseItem,
+  spawnFood,
+  stepSnake
+} from './gameUtils'
 
 describe('stepSnake', () => {
   it('moves forward without growth', () => {
@@ -72,5 +81,32 @@ describe('spawnFood', () => {
   it('returns null when board is full', () => {
     const snake = [{ x: 0, y: 0 }]
     expect(spawnFood(snake, 1)).toBeNull()
+  })
+})
+
+describe('economy helpers', () => {
+  it('blocks purchase when money is insufficient', () => {
+    const economy = { ...INITIAL_ECONOMY, money: 3 }
+    expect(canPurchaseItem(economy, SHOP_ITEM_IDS.shield)).toBe(false)
+  })
+
+  it('applies growth pack purchase', () => {
+    const economy = { ...INITIAL_ECONOMY, money: 10 }
+    const next = purchaseItem(economy, SHOP_ITEM_IDS.growthPack)
+
+    expect(next.money).toBe(6)
+    expect(next.pendingGrowth).toBe(2)
+  })
+
+  it('caps multiplier purchases at max level', () => {
+    const economy = { ...INITIAL_ECONOMY, money: 99, coinMultiplier: 4 }
+    const next = purchaseItem(economy, SHOP_ITEM_IDS.coinMultiplier)
+
+    expect(next).toBe(economy)
+  })
+
+  it('converts slow level to tick ms', () => {
+    expect(getTickMs(0)).toBe(150)
+    expect(getTickMs(3)).toBe(210)
   })
 })

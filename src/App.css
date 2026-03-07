@@ -1,4 +1,12 @@
 :root {
+  --bg: #f8f9fb;
+  --panel: #ffffff;
+  --text: #1f2937;
+  --grid: #d9dde5;
+  --head: #047857;
+  --body: #10b981;
+  --food: #ef4444;
+  --accent: #0f172a;
   --bg-0: #020617;
   --bg-1: #0f172a;
   --panel: #0b1220;
@@ -28,12 +36,17 @@
   padding: 18px 18px 26px;
 }
 
-h1 {
+h1,
+h2 {
   margin: 0;
   font-size: clamp(1.9rem, 2.6vw, 2.5rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-shadow: 0 4px 18px rgba(34, 197, 94, 0.35);
+}
+
+h2 {
+  font-size: 1.25rem;
 }
 
 .instructions {
@@ -56,9 +69,26 @@ h1 {
   backdrop-filter: blur(2px);
 }
 
+.buffs {
+  width: min(520px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.buffs > span {
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
 .game-over {
   color: var(--danger);
 }
+
 
 .scene-shell {
   width: min(840px, 96vw);
@@ -100,6 +130,64 @@ h1 {
   transform: translateY(0);
 }
 
+.shop {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shop-item {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.shop-item:hover:not(:disabled) {
+  border-color: #0ea5e9;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.16);
+}
+
+.shop-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.shop-item__name {
+  font-weight: 700;
+}
+
+.shop-item__desc,
+.shop-item__meta {
+  font-size: 0.85rem;
+}
+
+.shop-item__action {
+  color: #0369a1;
+  font-size: 0.95rem;
+}
+
+.restart {
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 10px 16px;
+  cursor: pointer;
+}
 @media (max-width: 720px) {
   .app {
     gap: 12px;
@@ -114,5 +202,15 @@ h1 {
 
   .scene-shell {
     max-height: 66vh;
+  }
+}
+
+@media (max-width: 720px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .buffs {
+    grid-template-columns: 1fr;
   }
 }
