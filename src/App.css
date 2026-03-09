@@ -69,6 +69,29 @@ h2 {
   backdrop-filter: blur(2px);
 }
 
+.audio-toggle {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.audio-toggle:hover {
+  border-color: #22c55e;
+  transform: translateY(-1px);
+}
+
+.audio-toggle[aria-pressed='true'] {
+  background: linear-gradient(90deg, #166534, #22c55e);
+  color: #052e16;
+  border-color: transparent;
+}
+
 .buffs {
   width: min(520px, 100%);
   display: grid;
