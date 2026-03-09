@@ -19,6 +19,7 @@ import {
   spawnFood,
   stepSnake
 } from './gameUtils'
+import { SOUND_EVENTS, createSoundEffects } from './soundEffects'
 
 extend({ ThreeOrbitControls })
 
@@ -249,6 +250,8 @@ function App() {
   const [score, setScore] = useState(0)
   const [isGameOver, setIsGameOver] = useState(false)
   const [economy, setEconomy] = useState(INITIAL_ECONOMY)
+  const soundEffectsRef = useRef(null)
+  const startCuePlayedRef = useRef(false)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
   const audioEngineRef = useRef(null)
 
@@ -294,6 +297,29 @@ function App() {
   }, [])
 
   useEffect(() => {
+    soundEffectsRef.current = createSoundEffects()
+
+    return () => {
+      soundEffectsRef.current?.destroy()
+      soundEffectsRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isGameOver) {
+      startCuePlayedRef.current = false
+      return
+    }
+
+    if (startCuePlayedRef.current) {
+      return
+    }
+
+    soundEffectsRef.current?.play(SOUND_EVENTS.start)
+    startCuePlayedRef.current = true
+  }, [isGameOver])
+
+  useEffect(() => {
     function onKeyDown(event) {
       const next = DIRECTIONS[event.key]
       if (!next || isGameOver) {
@@ -301,6 +327,7 @@ function App() {
       }
 
       unlockAudio()
+      soundEffectsRef.current?.resume()
 
       setQueuedDirection((currentQueued) => {
         if (isOppositeDirection(direction, next) || isOppositeDirection(currentQueued, next)) {
@@ -335,12 +362,15 @@ function App() {
         const nextSnake = stepSnake(currentSnake, activeDirection, shouldGrow)
 
         if (hasCollision(nextSnake, GRID_SIZE)) {
+          soundEffectsRef.current?.play(SOUND_EVENTS.collision)
+
           if (economy.shields > 0) {
             setEconomy((value) => ({ ...value, shields: Math.max(0, value.shields - 1) }))
             return currentSnake
           }
 
           audioEngineRef.current?.playGameOverEffect()
+          soundEffectsRef.current?.play(SOUND_EVENTS.gameOver)
           setIsGameOver(true)
           return currentSnake
         }
@@ -351,6 +381,7 @@ function App() {
 
         if (willEatFood) {
           audioEngineRef.current?.playEatEffect()
+          soundEffectsRef.current?.play(SOUND_EVENTS.eat)
           setScore((value) => value + 1)
           setEconomy((value) => ({ ...value, money: value.money + value.coinMultiplier }))
           setFood(spawnFood(nextSnake, GRID_SIZE))
@@ -387,6 +418,8 @@ function App() {
   }
 
   function resetGame() {
+    const shouldPlayStartImmediately = !isGameOver
+
     setSnake(INITIAL_SNAKE)
     setDirection(INITIAL_DIRECTION)
     setQueuedDirection(INITIAL_DIRECTION)
@@ -394,6 +427,13 @@ function App() {
     setScore(0)
     setEconomy(INITIAL_ECONOMY)
     setIsGameOver(false)
+
+    if (shouldPlayStartImmediately) {
+      soundEffectsRef.current?.play(SOUND_EVENTS.start)
+      startCuePlayedRef.current = true
+    } else {
+      startCuePlayedRef.current = false
+    }
   }
 
   return (
