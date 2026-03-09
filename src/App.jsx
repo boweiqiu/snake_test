@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, extend, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import './App.css'
+import { createAudioEngine, togglePlaybackState } from './audioEngine'
 import {
   DIRECTIONS,
   GRID_SIZE,
@@ -251,8 +252,49 @@ function App() {
   const [economy, setEconomy] = useState(INITIAL_ECONOMY)
   const soundEffectsRef = useRef(null)
   const startCuePlayedRef = useRef(false)
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const audioEngineRef = useRef(null)
 
   const tickMs = useMemo(() => getTickMs(economy.slowLevel), [economy.slowLevel])
+
+  function getAudioEngine() {
+    if (!audioEngineRef.current) {
+      audioEngineRef.current = createAudioEngine()
+    }
+
+    return audioEngineRef.current
+  }
+
+  function unlockAudio() {
+    const engine = getAudioEngine()
+    void engine.resume()
+  }
+
+  function toggleMusic() {
+    getAudioEngine()
+    setIsMusicPlaying((current) => togglePlaybackState(current))
+  }
+
+  useEffect(() => {
+    const engine = audioEngineRef.current
+    if (!engine) {
+      return
+    }
+
+    if (isMusicPlaying) {
+      void engine.resume().then(() => {
+        engine.startMusic()
+      })
+      return
+    }
+
+    engine.stopMusic()
+  }, [isMusicPlaying])
+
+  useEffect(() => () => {
+    audioEngineRef.current?.dispose()
+    audioEngineRef.current = null
+  }, [])
 
   useEffect(() => {
     soundEffectsRef.current = createSoundEffects()
@@ -284,6 +326,7 @@ function App() {
         return
       }
 
+      unlockAudio()
       soundEffectsRef.current?.resume()
 
       setQueuedDirection((currentQueued) => {
@@ -326,6 +369,7 @@ function App() {
             return currentSnake
           }
 
+          audioEngineRef.current?.playGameOverEffect()
           soundEffectsRef.current?.play(SOUND_EVENTS.gameOver)
           setIsGameOver(true)
           return currentSnake
@@ -336,6 +380,7 @@ function App() {
         }
 
         if (willEatFood) {
+          audioEngineRef.current?.playEatEffect()
           soundEffectsRef.current?.play(SOUND_EVENTS.eat)
           setScore((value) => value + 1)
           setEconomy((value) => ({ ...value, money: value.money + value.coinMultiplier }))
@@ -422,6 +467,15 @@ function App() {
       <div className="hud">
         <span>Score: {score}</span>
         <span>Occupied: {occupiedCellCount}</span>
+        <span>Music: {isMusicPlaying ? 'On' : 'Off'}</span>
+        <button
+          type="button"
+          onClick={toggleMusic}
+          className="audio-toggle"
+          aria-pressed={isMusicPlaying}
+        >
+          {isMusicPlaying ? 'Pause Music' : 'Play Music'}
+        </button>
         {isGameOver && <strong className="game-over">Game Over</strong>}
       </div>
 
